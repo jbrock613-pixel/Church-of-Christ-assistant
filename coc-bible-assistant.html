@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Church of Christ Bible Study Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+            font-style: italic;
+        }
+
+        .chat-container {
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            text-align: right;
+        }
+
+        .user-message .bubble {
+            background: #3498db;
+            color: white;
+            display: inline-block;
+            padding: 12px 18px;
+            border-radius: 18px 18px 4px 18px;
+            max-width: 70%;
+            text-align: left;
+        }
+
+        .bot-message .bubble {
+            background: white;
+            color: #333;
+            display: inline-block;
+            padding: 12px 18px;
+            border-radius: 18px 18px 18px 4px;
+            max-width: 85%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            line-height: 1.6;
+        }
+
+        .scripture-reference {
+            color: #8b4513;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .scripture-reference:hover {
+            color: #d2691e;
+        }
+
+        .input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+
+        #userInput {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: 'Georgia', serif;
+            transition: border-color 0.3s;
+        }
+
+        #userInput:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        #sendBtn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #sendBtn:hover {
+            background: #229954;
+        }
+
+        #sendBtn:active {
+            transform: scale(0.98);
+        }
+
+        .quick-actions {
+            padding: 15px 20px;
+            background: #f8f8f8;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .quick-actions h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .action-btn:hover {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 10px;
+            font-style: italic;
+            color: #666;
+        }
+
+        .typing-indicator.active {
+            display: block;
+        }
+
+        /* Scripture popup modal */
+        .scripture-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .scripture-modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .close-modal {
+            float: right;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close-modal:hover {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📖 Church of Christ Bible Study Assistant</h1>
+            <p>"Speaking where the Bible speaks, silent where the Bible is silent"</p>
+        </div>
+
+        <div class="chat-container" id="chatContainer">
+            <div class="message bot-message">
+                <div class="bubble">
+                    Welcome! I'm here to help with your Bible study and sermon preparation. I follow the New Testament pattern and emphasize Scripture as our sole authority. How may I assist you today?
+                </div>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            The assistant is thinking...
+        </div>
+
+        <div class="quick-actions">
+            <h3>Quick Topics:</h3>
+            <div class="action-buttons">
+                <button class="action-btn" onclick="quickAction('salvation')">Plan of Salvation</button>
+                <button class="action-btn" onclick="quickAction('baptism')">Baptism</button>
+                <button class="action-btn" onclick="quickAction('worship')">New Testament Worship</button>
+                <button class="action-btn" onclick="quickAction('organization')">Church Organization</button>
+                <button class="action-btn" onclick="quickAction('communion')">Lord's Supper</button>
+            </div>
+        </div>
+
+        <div class="input-container">
+            <div class="input-wrapper">
+                <input type="text" id="userInput" placeholder="Ask a Bible question or request study help..." 
+                       onkeypress="handleKeyPress(event)">
+                <button id="sendBtn" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripture Reference Modal -->
+    <div class="scripture-modal" id="scriptureModal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeScriptureModal()">&times;</span>
+            <div id="scriptureContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Core chatbot configuration with Church of Christ doctrine
+        const botConfig = {
+            // Key doctrinal positions
+            doctrines: {
+                salvation: {
+                    steps: ['Hear (Romans 10:17)', 'Believe (John 8:24)', 'Repent (Acts 2:38)', 
+                            'Confess (Romans 10:9-10)', 'Be Baptized (Acts 2:38)', 'Live Faithfully (Revelation 2:10)'],
+                    keyVerses: ['Acts 2:38', 'Mark 16:16', 'Romans 6:3-4', 'Galatians 3:27', '1 Peter 3:21']
+                },
+                baptism: {
+                    purpose: 'For remission of sins (Acts 2:38)',
+                    mode: 'Immersion only (Romans 6:4)',
+                    subjects: 'Believers who can understand the gospel'
+                },
+                worship: {
+                    elements: ['Singing (Ephesians 5:19)', 'Prayer (1 Thessalonians 5:17)', 
+                              'Preaching (2 Timothy 4:2)', 'Communion (Acts 20:7)', 'Giving (1 Corinthians 16:1-2)'],
+                    music: 'A cappella only - no instruments'
+                },
+                organization: {
+                    structure: 'Autonomous congregations with elders and deacons',
+                    leadership: ['Elders (1 Timothy 3:1-7)', 'Deacons (1 Timothy 3:8-13)', 'Evangelists (2 Timothy 4:5)']
+                }
+            },
+
+            // Scripture database (simplified - in production, use a complete API)
+            scriptures: {
+                'Acts 2:38': 'Then Peter said unto them, Repent, and be baptized every one of you in the name of Jesus Christ for the remission of sins, and ye shall receive the gift of the Holy Ghost.',
+                'Mark 16:16': 'He that believeth and is baptized shall be saved; but he that believeth not shall be damned.',
+                'Romans 6:3-4': 'Know ye not, that so many of us as were baptized into Jesus Christ were baptized into his death? Therefore we are buried with him by baptism into death...',
+                'Galatians 3:27': 'For as many of you as have been baptized into Christ have put on Christ.',
+                'Ephesians 5:19': 'Speaking to yourselves in psalms and hymns and spiritual songs, singing and making melody in your heart to the Lord.',
+                '1 Peter 3:21': 'The like figure whereunto even baptism doth also now save us...',
+                'Romans 10:17': 'So then faith cometh by hearing, and hearing by the word of God.',
+                'John 8:24': 'I said therefore unto you, that ye shall die in your sins: for if ye believe not that I am he, ye shall die in your sins.'
+            },
+
+            // Response patterns based on keywords
+            responsePatterns: {
+                'salvation': 'provideSalvationPlan',
+                'baptism': 'explainBaptism',
+                'music': 'explainWorship',
+                'instrument': 'explainAcappella',
+                'elder': 'explainOrganization',
+                'divorce': 'explainDivorce',
+                'communion': 'explainCommunion',
+                'lord\'s supper': 'explainCommunion'
+            }
+        };
+
+        // Main response generation engine
+        class BibleAssistant {
+            constructor(config) {
+                this.config = config;
+                this.conversationHistory = [];
+            }
+
+            // Process user input and generate appropriate response
+            async processMessage(userInput) {
+                const lowercaseInput = userInput.toLowerCase();
+                
+                // Check for specific doctrine questions
+                for (const [keyword, handler] of Object.entries(this.config.responsePatterns)) {
+                    if (lowercaseInput.includes(keyword)) {
+                        return this[handler]();
+                    }
+                }
+
+                // Default to general Bible study help
+                return this.provideGeneralHelp(userInput);
+            }
+
+            provideSalvationPlan() {
+                let response = "According to the New Testament pattern, here are the steps of salvation:\n\n";
+                
+                this.config.doctrines.salvation.steps.forEach((step, index) => {
+                    response += `${index + 1}. ${step}\n`;
+                });
+                
+                response += "\nKey scriptures to study:\n";
+                this.config.doctrines.salvation.keyVerses.forEach(verse => {
+                    response += `• <span class="scripture-reference" onclick="showScripture('${verse}')">${verse}</span>\n`;
+                });
+                
+                response += "\nThe most important verse is Acts 2:38, which shows both repentance and baptism are necessary for the remission of sins. Would you like to study any of these passages in more detail?";
+                
+                return response;
+            }
+
+            explainBaptism() {
+                return `Biblical baptism according to the New Testament:\n\n` +
+                    `**Purpose**: ${this.config.doctrines.baptism.purpose}\n` +
+                    `**Mode**: ${this.config.doctrines.baptism.mode}\n` +
+                    `**Who**: ${this.config.doctrines.baptism.subjects}\n\n` +
+                    `Key passages for study:\n` +
+                    `• <span class="scripture-reference" onclick="showScripture('Acts 2:38')">Acts 2:38</span> - For remission of sins\n` +
+                    `• <span class="scripture-reference" onclick="showScripture('Romans 6:3-4')">Romans 6:3-4</span> - Burial and resurrection\n` +
+                    `• <span class="scripture-reference" onclick="showScripture('Galatians 3:27')">Galatians 3:27</span> - Put on Christ\n` +
+                    `• <span class="scripture-reference" onclick="showScripture('1 Peter 3:21')">1 Peter 3:21</span> - Baptism saves\n\n` +
+                    `Remember, baptism is not a work of merit but an act of obedient faith. Would you like to explore any specific aspect?`;
+            }
+
+            explainWorship() {
+                let response = "New Testament worship consists of five acts:\n\n";
+                
+                this.config.doctrines.worship.elements.forEach(element => {
+                    response += `• ${element}\n`;
+                });
+                
+                response += `\n**Important note about music**: ${this.config.doctrines.worship.music}\n\n`;
+                response += "The New Testament specifies singing, not playing instruments. ";
+                response += "Ephesians 5:19 and Colossians 3:16 both emphasize making melody in the heart, not with mechanical instruments.\n\n";
+                response += "Would you like scriptural support for any of these worship practices?";
+                
+                return response;
+            }
+
+            explainAcappella() {
+                return `The New Testament pattern for worship music is a cappella (voice only) singing:\n\n` +
+                    `**Biblical Evidence**:\n` +
+                    `• <span class="scripture-reference" onclick="showScripture('Ephesians 5:19')">Ephesians 5:19</span> - "singing and making melody in your heart"\n` +
+                    `• Colossians 3:16 - "singing with grace in your hearts"\n` +
+                    `• The Greek word "psallo" means to sing, making melody in the heart\n\n` +
+                    `**Historical Evidence**:\n` +
+                    `• The early church sang without instruments for several centuries\n` +
+                    `• Instruments were introduced much later, departing from the apostolic pattern\n\n` +
+                    `**Principle**: We speak where the Bible speaks and are silent where it is silent. ` +
+                    `Since the New Testament only authorizes singing, we don't add to God's pattern.\n\n` +
+                    `This is about following God's will precisely as revealed. Would you like to study the Greek terms or historical evidence?`;
+            }
+
+            explainOrganization() {
+                return `New Testament church organization:\n\n` +
+                    `**Structure**: ${this.config.doctrines.organization.structure}\n\n` +
+                    `**Leadership roles**:\n` +
+                    this.config.doctrines.organization.leadership.map(role => `• ${role}`).join('\n') + '\n\n' +
+                    `**Key principles**:\n` +
+                    `• Each congregation is autonomous (self-governing)\n` +
+                    `• No earthly headquarters or hierarchy\n` +
+                    `• Christ is the only head of the church (Ephesians 1:22-23)\n` +
+                    `• Elders oversee only their local congregation (1 Peter 5:2)\n\n` +
+                    `This pattern prevents corruption and maintains scriptural purity. ` +
+                    `Would you like to study the qualifications for any of these roles?`;
+            }
+
+            explainCommunion() {
+                return `The Lord's Supper according to New Testament teaching:\n\n` +
+                    `**When**: Every first day of the week (Sunday)\n` +
+                    `• <span class="scripture-reference" onclick="showScripture('Acts 20:7')">Acts 20:7</span> - "Upon the first day of the week"\n\n` +
+                    `**Elements**:\n` +
+                    `• Unleavened bread - Christ's body (Matthew 26:26)\n` +
+                    `• Fruit of the vine - Christ's blood (Matthew 26:27-28)\n\n` +
+                    `**Purpose**:\n` +
+                    `• Remember Christ's sacrifice (1 Corinthians 11:24-25)\n` +
+                    `• Proclaim His death till He comes (1 Corinthians 11:26)\n` +
+                    `• Commune with Christ and fellow Christians\n\n` +
+                    `**Manner**:\n` +
+                    `• Self-examination required (1 Corinthians 11:28)\n` +
+                    `• Must discern the Lord's body (1 Corinthians 11:29)\n` +
+                    `• Worthy manner to avoid condemnation\n\n` +
+                    `This memorial is central to our worship each Lord's Day. Would you like to study the Corinthian passages about proper observance?`;
+            }
+
+            explainDivorce() {
+                return `Marriage and divorce according to Christ's teaching:\n\n` +
+                    `**God's Ideal**:\n` +
+                    `• Marriage is a lifelong covenant (Matthew 19:6)\n` +
+                    `• "What God has joined together, let not man separate"\n\n` +
+                    `**Only Scriptural Cause for Divorce**:\n` +
+                    `• Fornication/adultery by spouse (Matthew 19:9)\n` +
+                    `• This is the only exception Christ gave\n\n` +
+                    `**Remarriage**:\n` +
+                    `• The innocent party may remarry after scriptural divorce\n` +
+                    `• Others who remarry commit adultery (Luke 16:18)\n\n` +
+                    `**Important Note**: This is a sensitive topic requiring careful study and wisdom. ` +
+                    `Each situation is unique. I strongly recommend:\n` +
+                    `• Deep personal study of Matthew 19:3-12\n` +
+                    `• Consultation with your local elders\n` +
+                    `• Prayer for wisdom and guidance\n\n` +
+                    `Would you like to examine the specific passages together?`;
+            }
+
+            provideGeneralHelp(userInput) {
+                return `I understand you're asking about "${userInput}". Let me help you explore this biblically.\n\n` +
+                    `For any Bible study, I recommend:\n\n` +
+                    `1. **Read the context** - Never take verses in isolation\n` +
+                    `2. **Compare scriptures** - Let the Bible interpret itself\n` +
+                    `3. **Consider the audience** - Who was being addressed?\n` +
+                    `4. **Apply properly** - Distinguish between cultural and eternal principles\n\n` +
+                    `Could you be more specific about what aspect you'd like to study? For example:\n` +
+                    `• A particular passage you're studying\n` +
+                    `• A doctrinal question\n` +
+                    `• Sermon preparation help\n` +
+                    `• Historical or cultural context\n\n` +
+                    `I'm here to help you dig deeper into God's Word!`;
+            }
+        }
+
+        // Initialize the assistant
+        const assistant = new BibleAssistant(botConfig);
+
+        // UI interaction functions
+        function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Display user message
+            addMessage(message, 'user');
+            
+            // Clear input
+            input.value = '';
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            // Generate and display response
+            setTimeout(async () => {
+                const response = await assistant.processMessage(message);
+                hideTypingIndicator();
+                addMessage(response, 'bot');
+            }, 1000);
+        }
+
+        function addMessage(text, sender) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.innerHTML = text.replace(/\n/g, '<br>');
+            
+            messageDiv.appendChild(bubble);
+            chatContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function showTypingIndicator() {
+            document.getElementById('typingIndicator').classList.add('active');
+        }
+
+        function hideTypingIndicator() {
+            document.getElementById('typingIndicator').classList.remove('active');
+        }
+
+        function quickAction(topic) {
+            const input = document.getElementById('userInput');
+            
+            const prompts = {
+                'salvation': 'What does the Bible teach about salvation?',
+                'baptism': 'Explain biblical baptism',
+                'worship': 'What are the elements of New Testament worship?',
+                'organization': 'How should the church be organized?',
+                'communion': 'Tell me about the Lord\'s Supper'
+            };
+            
+            input.value = prompts[topic];
+            sendMessage();
+        }
+
+        function showScripture(reference) {
+            const modal = document.getElementById('scriptureModal');
+            const content = document.getElementById('scriptureContent');
+            
+            const verseText = botConfig.scriptures[reference] || 'Scripture text would be loaded here from a Bible API';
+            
+            content.innerHTML = `
+                <h2>${reference}</h2>
+                <p style="margin-top: 20px; line-height: 1.8; font-size: 18px;">
+                    ${verseText}
+                </p>
+                <p style="margin-top: 20px; font-style: italic; color: #666;">
+                    Note: In a production system, this would connect to a complete Bible API 
+                    for full scripture access.
+                </p>
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        function closeScriptureModal() {
+            document.getElementById('scriptureModal').classList.remove('active');
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('scriptureModal');
+            if (event.target == modal) {
+                modal.classList.remove('active');
+            }
+        }
+    </script>
+</body>
+</html>
